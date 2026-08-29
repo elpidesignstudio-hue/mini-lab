@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Merge Grid — 숫자 합치기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f7f6f4;
+    --ink:#1c1d22;
+    --muted:#75757e;
+    --line:rgba(28,29,34,0.09);
+    --line-strong:rgba(28,29,34,0.16);
+    --accent:#ff6a48;
+    --accent-ink:#c8431f;
+    --board:#eae7e2;
+    --cell:#f3f0ec;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; padding:34px 18px 44px;
+    background:
+      radial-gradient(800px 460px at 88% -10%, #fff0e9 0%, rgba(255,240,233,0) 62%),
+      var(--bg);
+    font-family:'Sora', ui-sans-serif, system-ui, sans-serif;
+    color:var(--ink); -webkit-font-smoothing:antialiased;
+    display:flex; justify-content:center;
+  }
+  .wrap{ width:100%; max-width:460px; }
+
+  .top{ display:flex; align-items:flex-end; justify-content:space-between; gap:14px; margin-bottom:16px; user-select:none; }
+  .brand{ font-family:'Bricolage Grotesque',serif; font-size:26px; font-weight:700; line-height:1.1; }
+  .brand span{ color:var(--accent); }
+  .brand small{ display:block; font-family:'Sora',sans-serif; font-size:11.5px; font-weight:400; color:var(--muted); margin-top:4px; }
+  .scores{ display:flex; gap:8px; }
+  .score{
+    background:#fff; border:1px solid var(--line); border-radius:14px;
+    padding:8px 14px; text-align:center; min-width:80px;
+    box-shadow:0 10px 24px -20px rgba(28,29,34,.6);
+  }
+  .score i{ display:block; font-style:normal; font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
+  .score b{ font-family:'JetBrains Mono',monospace; font-size:20px; font-weight:500; font-variant-numeric:tabular-nums; }
+  .gain{
+    position:absolute; right:12px; top:0; color:var(--accent-ink);
+    font-family:'JetBrains Mono',monospace; font-weight:600; font-size:15px;
+    pointer-events:none; opacity:0;
+  }
+  .scorewrap{ position:relative; }
+  @keyframes rise{ 0%{opacity:1; transform:translateY(0);} 100%{opacity:0; transform:translateY(-34px);} }
+  .gain.go{ animation:rise .7s ease-out forwards; }
+
+  .actions{ display:flex; gap:8px; margin-bottom:14px; }
+  .btn{
+    font-family:inherit; font-size:13px; font-weight:600; cursor:pointer;
+    border:1px solid var(--line-strong); background:#fff; color:var(--ink);
+    border-radius:12px; padding:10px 16px; transition:.15s;
+  }
+  .btn:hover{ transform:translateY(-1px); }
+  .btn:disabled{ opacity:.4; cursor:default; transform:none; }
+  .btn.primary{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  .spacer{ flex:1; }
+  .btn.ghost{ border:0; background:transparent; color:var(--muted); }
+  .btn.ghost:hover{ color:var(--accent-ink); }
+
+  .boardwrap{ position:relative; }
+  .board{
+    position:relative; background:var(--board); border-radius:20px; padding:12px;
+    display:grid; grid-template-columns:repeat(4,1fr); gap:12px;
+    touch-action:none; user-select:none; aspect-ratio:1/1;
+  }
+  .bgcell{ background:var(--cell); border-radius:12px; }
+  .layer{ position:absolute; inset:12px; pointer-events:none; }
+  .layer.notrans .tile{ transition:none !important; }
+
+  .tile{ position:absolute; left:0; top:0; transition:transform .13s ease-out; }
+  .face{
+    width:100%; height:100%; border-radius:12px;
+    display:grid; place-items:center;
+    font-family:'JetBrains Mono',monospace; font-weight:500;
+    font-variant-numeric:tabular-nums; letter-spacing:-0.02em;
+    background:#f4efe9; color:var(--ink);
+    box-shadow:0 6px 14px -10px rgba(28,29,34,.7);
+  }
+  @keyframes pop{ 0%{ transform:scale(0); } 70%{ transform:scale(1.1); } 100%{ transform:scale(1); } }
+  @keyframes bump{ 0%{ transform:scale(1); } 45%{ transform:scale(1.16); } 100%{ transform:scale(1); } }
+  .face.new{ animation:pop .17s ease-out both; }
+  .face.merged{ animation:bump .19s ease-out 90ms both; }
+
+  .v2   { background:#f5f1eb; }
+  .v4   { background:#efe5d8; }
+  .v8   { background:#ffdcc8; }
+  .v16  { background:#ffc2a3; }
+  .v32  { background:#ff9d76; color:#fff; }
+  .v64  { background:#ff6a48; color:#fff; }
+  .v128 { background:#f4543b; color:#fff; }
+  .v256 { background:#e03f2c; color:#fff; }
+  .v512 { background:#c8431f; color:#fff; }
+  .v1024{ background:#9d2f18; color:#fff; }
+  .v2048{ background:#1c1d22; color:#ffd7a8; box-shadow:0 0 0 2px #ffd7a8 inset, 0 10px 24px -12px #1c1d22; }
+  .vbig { background:#0e0d13; color:#ffb04f; box-shadow:0 0 0 2px #ffb04f inset, 0 10px 24px -12px #0e0d13; }
+
+  .d1{ font-size:min(9vw,40px); }
+  .d2{ font-size:min(8vw,36px); }
+  .d3{ font-size:min(6.6vw,30px); }
+  .d4{ font-size:min(5vw,23px); }
+
+  .over{
+    position:absolute; inset:0; border-radius:20px;
+    background:rgba(247,246,244,.86); backdrop-filter:blur(3px);
+    display:grid; place-items:center; text-align:center;
+    opacity:0; pointer-events:none; transition:opacity .3s;
+  }
+  .over.show{ opacity:1; pointer-events:auto; }
+  .over h2{ font-family:'Bricolage Grotesque',serif; font-size:30px; margin:0 0 6px; }
+  .over p{ margin:0 0 18px; color:var(--muted); font-size:13px; }
+
+  .legend{ margin-top:16px; font-size:11.5px; color:var(--muted); line-height:1.9; text-align:center; }
+  .legend kbd{
+    font-family:'JetBrains Mono',monospace; font-size:11px; background:#fff;
+    border:1px solid var(--line-strong); border-bottom-width:2px; border-radius:6px; padding:1px 5px; color:var(--ink);
+  }
+  .legend a{ color:var(--muted); text-decoration:none; }
+  .legend a:hover{ color:var(--accent-ink); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <div class="brand">Merge <span>Grid</span>
+      <small>같은 숫자를 밀어 합치고 2048까지</small>
+    </div>
+    <div class="scores">
+      <div class="score scorewrap"><i>점수</i><b id="score">0</b><span class="gain" id="gain"></span></div>
+      <div class="score"><i>최고</i><b id="best">0</b></div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn primary" id="new">새 게임</button>
+    <button class="btn" id="undo" disabled>되돌리기</button>
+    <div class="spacer"></div>
+    <button class="btn ghost" id="link">← mini-lab</button>
+  </div>
+
+  <div class="boardwrap">
+    <div class="board" id="board"></div>
+    <div class="over" id="over">
+      <div>
+        <h2 id="overTitle">막혔어요</h2>
+        <p id="overText">더 이상 움직일 수 없습니다.</p>
+        <button class="btn primary" id="overBtn">다시 하기</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> 또는 <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> · 모바일은 스와이프 · <kbd>Ctrl+Z</kbd> 되돌리기<br>
+    <a href="index.html">← mini-lab 으로 돌아가기</a>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  var N = 4;
+  var boardEl = document.getElementById('board');
+  var scoreEl = document.getElementById('score');
+  var bestEl  = document.getElementById('best');
+  var gainEl  = document.getElementById('gain');
+  var overEl  = document.getElementById('over');
+  var undoBtn = document.getElementById('undo');
+
+  /* board background cells + tile layer */
+  var bgCells = [];
+  for (var i = 0; i < N*N; i++){
+    var d = document.createElement('div');
+    d.className = 'bgcell';
+    boardEl.appendChild(d);
+    bgCells.push(d);
+  }
+  var layer = document.createElement('div');
+  layer.className = 'layer';
+  boardEl.appendChild(layer);
+
+  var grid, score = 0, best = 0, idSeq = 1;
+  var nodes = {};       // tile id -> element
+  var vanish = {};      // tile id -> {r,c} for tiles absorbed by a merge
+  var history = [];
+  var finished = false, wonAlready = false;
+
+  try{ best = parseInt(localStorage.getItem('mergegrid.best') || '0', 10) || 0; }catch(e){}
+  bestEl.textContent = best;
+
+  /* ---------- geometry ---------- */
+  var rects = [];
+  function measure(){
+    var b = boardEl.getBoundingClientRect();
+    var l = layer.getBoundingClientRect();
+    rects = bgCells.map(function(c){
+      var r = c.getBoundingClientRect();
+      return { x:r.left - l.left, y:r.top - l.top, w:r.width, h:r.height };
+    });
+  }
+  function place(el, r, c){
+    var m = rects[r*N + c];
+    if (!m) return;
+    el.style.width  = m.w + 'px';
+    el.style.height = m.h + 'px';
+    el.style.transform = 'translate(' + m.x + 'px,' + m.y + 'px)';
+  }
+
+  /* ---------- model ---------- */
+  function emptyGrid(){
+    var g = [];
+    for (var r = 0; r < N; r++){ g.push([null,null,null,null]); }
+    return g;
+  }
+  function eachTile(fn){
+    for (var r = 0; r < N; r++) for (var c = 0; c < N; c++) if (grid[r][c]) fn(grid[r][c], r, c);
+  }
+  function freeCells(){
+    var out = [];
+    for (var r = 0; r < N; r++) for (var c = 0; c < N; c++) if (!grid[r][c]) out.push({r:r, c:c});
+    return out;
+  }
+  function addRandom(){
+    var free = freeCells();
+    if (!free.length) return;
+    var s = free[Math.floor(Math.random() * free.length)];
+    grid[s.r][s.c] = { id:idSeq++, r:s.r, c:s.c, val:(Math.random() < 0.9 ? 2 : 4), isNew:true, merged:false };
+  }
+
+  function cls(v){
+    return v <= 1024 ? ('v' + v) : (v === 2048 ? 'v2048' : 'vbig');
+  }
+  function digits(v){ return 'd' + String(v).length; }
+
+  /* ---------- render ---------- */
+  function render(animate){
+    var live = {};
+    eachTile(function(t){ live[t.id] = t; });
+
+    Object.keys(nodes).forEach(function(id){
+      if (live[id]) return;
+      var el = nodes[id], v = vanish[id];
+      delete nodes[id];
+      if (v && animate){
+        place(el, v.r, v.c);
+        setTimeout(function(){ if (el.parentNode) el.parentNode.removeChild(el); }, 170);
+      } else if (el.parentNode){
+        el.parentNode.removeChild(el);
+      }
+    });
+    vanish = {};
+
+    Object.keys(live).forEach(function(id){
+      var t = live[id], el = nodes[id];
+      if (!el){
+        el = document.createElement('div');
+        el.className = 'tile';
+        var face = document.createElement('div');
+        face.className = 'face';
+        el.appendChild(face);
+        nodes[id] = el;
+        layer.appendChild(el);
+        place(el, t.r, t.c);          // start where it belongs
+        el.offsetHeight;              // flush so the first transform is not animated
+      }
+      var f = el.firstChild;
+      f.textContent = t.val;
+      f.className = 'face ' + cls(t.val) + ' ' + digits(t.val)
+        + (animate && t.isNew ? ' new' : '')
+        + (animate && t.merged ? ' merged' : '');
+      place(el, t.r, t.c);
+      t.isNew = false;
+      t.merged = false;
+    });
+
+    scoreEl.textContent = score;
+    if (score > best){
+      best = score;
+      bestEl.textContent = best;
+      try{ localStorage.setItem('mergegrid.best', String(best)); }catch(e){}
+    }
+    undoBtn.disabled = history.length === 0;
+  }
+
+  function repaintPositions(){
+    measure();
+    layer.classList.add('notrans');
+    eachTile(function(t){ if (nodes[t.id]) place(nodes[t.id], t.r, t.c); });
+    layer.offsetHeight;
+    layer.classList.remove('notrans');
+  }
+
+  /* ---------- moves ---------- */
+  var VEC = { up:{r:-1,c:0}, down:{r:1,c:0}, left:{r:0,c:-1}, right:{r:0,c:1} };
+
+  function order(vec){
+    var rs = [0,1,2,3], cs = [0,1,2,3];
+    if (vec.r === 1) rs = [3,2,1,0];
+    if (vec.c === 1) cs = [3,2,1,0];
+    return { rs:rs, cs:cs };
+  }
+
+  function farthest(r, c, vec){
+    var nr = r, nc = c;
+    while (true){
+      var tr = nr + vec.r, tc = nc + vec.c;
+      if (tr < 0 || tr >= N || tc < 0 || tc >= N) return { r:nr, c:nc, next:null };
+      if (grid[tr][tc]) return { r:nr, c:nc, next:{ r:tr, c:tc } };
+      nr = tr; nc = tc;
+    }
+  }
+
+  function snapshot(){
+    var vals = [];
+    for (var r = 0; r < N; r++){
+      var row = [];
+      for (var c = 0; c < N; c++) row.push(grid[r][c] ? grid[r][c].val : 0);
+      vals.push(row);
+    }
+    history.push({ vals:vals, score:score, won:wonAlready });
+    if (history.length > 12) history.shift();
+  }
+
+  function move(dir){
+    if (finished) return;
+    var vec = VEC[dir], ord = order(vec), moved = false, earned = 0;
+
+    var before = snapshot();
+
+    eachTile(function(t){ t.merged = false; });
+
+    ord.rs.forEach(function(r){
+      ord.cs.forEach(function(c){
+        var tile = grid[r][c];
+        if (!tile) return;
+        var f = farthest(r, c, vec);
+        var nb = f.next ? grid[f.next.r][f.next.c] : null;
+
+        if (nb && nb.val === tile.val && !nb.merged && !nb.justMerged){
+          // merge tile into nb's cell
+          var merged = { id:idSeq++, r:nb.r, c:nb.c, val:tile.val * 2, isNew:false, merged:true, justMerged:true };
+          grid[nb.r][nb.c] = merged;
+          grid[r][c] = null;
+          vanish[tile.id] = { r:nb.r, c:nb.c };
+          vanish[nb.id]   = { r:nb.r, c:nb.c };
+          score += merged.val;
+          earned += merged.val;
+          moved = true;
+          if (merged.val === 2048 && !wonAlready){ wonAlready = true; showOver('2048 달성!', '계속 이어서 더 큰 수를 노려보세요.', true); }
+        } else if (f.r !== r || f.c !== c){
+          grid[r][c] = null;
+          grid[f.r][f.c] = tile;
+          tile.r = f.r; tile.c = f.c;
+          moved = true;
+        }
+      });
+    });
+
+    eachTile(function(t){ t.justMerged = false; });
+
+    if (!moved){
+      history.pop();   // nothing changed — drop the snapshot
+      nudge(dir);
+      return;
+    }
+
+    if (earned) showGain(earned);
+    addRandom();
+    render(true);
+
+    if (!canMove()){
+      finished = true;
+      setTimeout(function(){ showOver('막혔어요', '점수 ' + score + '점. 되돌리기로 한 수 물러도 됩니다.', false); }, 220);
+    }
+  }
+
+  function canMove(){
+    if (freeCells().length) return true;
+    for (var r = 0; r < N; r++){
+      for (var c = 0; c < N; c++){
+        var v = grid[r][c].val;
+        if (c < N-1 && grid[r][c+1].val === v) return true;
+        if (r < N-1 && grid[r+1][c].val === v) return true;
+      }
+    }
+    return false;
+  }
+
+  function nudge(dir){
+    var dx = dir === 'left' ? -5 : dir === 'right' ? 5 : 0;
+    var dy = dir === 'up'   ? -5 : dir === 'down'  ? 5 : 0;
+    if (!boardEl.animate) return;
+    boardEl.animate(
+      [{ transform:'translate(0,0)' }, { transform:'translate(' + dx + 'px,' + dy + 'px)' }, { transform:'translate(0,0)' }],
+      { duration:170, easing:'ease-out' }
+    );
+  }
+
+  function showGain(n){
+    gainEl.textContent = '+' + n;
+    gainEl.classList.remove('go');
+    void gainEl.offsetWidth;
+    gainEl.classList.add('go');
+  }
+
+  function showOver(title, text, isWin){
+    document.getElementById('overTitle').textContent = title;
+    document.getElementById('overText').textContent = text;
+    document.getElementById('overBtn').textContent = isWin ? '계속하기' : '다시 하기';
+    overEl.classList.add('show');
+    overEl.setAttribute('data-win', isWin ? '1' : '0');
+  }
+
+  document.getElementById('overBtn').addEventListener('click', function(){
+    overEl.classList.remove('show');
+    if (overEl.getAttribute('data-win') !== '1') reset();
+  });
+
+  /* ---------- undo / reset ---------- */
+  function restore(snap){
+    Object.keys(nodes).forEach(function(id){
+      var el = nodes[id];
+      if (el.parentNode) el.parentNode.removeChild(el);
+    });
+    nodes = {};
+    vanish = {};
+    grid = emptyGrid();
+    for (var r = 0; r < N; r++){
+      for (var c = 0; c < N; c++){
+        var v = snap.vals[r][c];
+        if (v) grid[r][c] = { id:idSeq++, r:r, c:c, val:v, isNew:false, merged:false };
+      }
+    }
+    score = snap.score;
+    wonAlready = snap.won;
+    finished = false;
+    overEl.classList.remove('show');
+    render(false);
+  }
+
+  undoBtn.addEventListener('click', function(){
+    var snap = history.pop();
+    if (snap) restore(snap);
+  });
+
+  function reset(){
+    Object.keys(nodes).forEach(function(id){
+      var el = nodes[id];
+      if (el.parentNode) el.parentNode.removeChild(el);
+    });
+    nodes = {}; vanish = {}; history = [];
+    grid = emptyGrid();
+    score = 0; finished = false; wonAlready = false;
+    overEl.classList.remove('show');
+    measure();
+    addRandom(); addRandom();
+    render(true);
+  }
+
+  document.getElementById('new').addEventListener('click', reset);
+  document.getElementById('link').addEventListener('click', function(){ location.href = 'index.html'; });
+
+  /* ---------- input ---------- */
+  var KEYS = {
+    ArrowUp:'up', ArrowDown:'down', ArrowLeft:'left', ArrowRight:'right',
+    w:'up', s:'down', a:'left', d:'right',
+    W:'up', S:'down', A:'left', D:'right'
+  };
+  document.addEventListener('keydown', function(e){
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')){
+      e.preventDefault();
+      var snap = history.pop();
+      if (snap) restore(snap);
+      return;
+    }
+    var dir = KEYS[e.key];
+    if (dir){ e.preventDefault(); move(dir); }
+  });
+
+  var sx = 0, sy = 0, tracking = false;
+  boardEl.addEventListener('pointerdown', function(e){
+    tracking = true; sx = e.clientX; sy = e.clientY;
+    boardEl.setPointerCapture(e.pointerId);
+  });
+  boardEl.addEventListener('pointerup', function(e){
+    if (!tracking) return;
+    tracking = false;
+    var dx = e.clientX - sx, dy = e.clientY - sy;
+    if (Math.abs(dx) < 24 && Math.abs(dy) < 24) return;
+    move(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'));
+  });
+  boardEl.addEventListener('pointercancel', function(){ tracking = false; });
+
+  window.addEventListener('resize', repaintPositions);
+
+  /* ---------- go ---------- */
+  grid = emptyGrid();
+  measure();
+  addRandom(); addRandom();
+  render(true);
+  window.addEventListener('load', repaintPositions);
+})();
+</script>
+</body>
+</html>

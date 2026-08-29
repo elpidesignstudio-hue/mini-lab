@@ -1,0 +1,385 @@
+<title>Brass Card</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,340;0,9..144,480;0,9..144,600;1,9..144,420&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg-0:#0b0c10;
+    --bg-1:#111319;
+    --surface-0:#1b1d24;
+    --surface-1:#121319;
+    --line:rgba(238,234,224,0.10);
+    --line-strong:rgba(238,234,224,0.16);
+    --paper:#f1ede2;
+    --muted:#9a99a6;
+    --brass-0:#e4c27a;
+    --brass-1:#c9a24b;
+    --brass-glow:rgba(201,162,75,0.35);
+  }
+
+  *{ box-sizing:border-box; }
+
+  body{
+    margin:0;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:64px 24px;
+    background:
+      radial-gradient(1100px 620px at 50% 18%, var(--bg-1), var(--bg-0) 68%);
+    font-family:'Manrope', ui-sans-serif, system-ui, sans-serif;
+    color:var(--paper);
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .stage{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:28px;
+  }
+
+  .caption{
+    text-align:center;
+    color:var(--muted);
+    font-size:12.5px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    max-width:320px;
+    line-height:1.7;
+  }
+  .caption b{ color:var(--brass-0); font-weight:600; }
+
+  .scene{
+    perspective:1500px;
+    width:340px;
+    height:452px;
+  }
+
+  .tilt{
+    width:100%;
+    height:100%;
+    position:relative;
+    transform:perspective(1500px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));
+    transition:transform 0.12s ease-out;
+    cursor:pointer;
+    outline:none;
+  }
+  .tilt.idle{
+    transition:transform 0.65s cubic-bezier(.22,1,.36,1);
+  }
+  .tilt:focus-visible{
+    outline:2px solid var(--brass-0);
+    outline-offset:10px;
+    border-radius:22px;
+  }
+
+  .flipper{
+    position:absolute;
+    inset:0;
+    transform-style:preserve-3d;
+    transition:transform 0.75s cubic-bezier(.5,.15,.15,1);
+    transform:rotateY(0deg);
+  }
+  .flipper.flipped{ transform:rotateY(180deg); }
+
+  .face{
+    position:absolute;
+    inset:0;
+    border-radius:20px;
+    backface-visibility:hidden;
+    -webkit-backface-visibility:hidden;
+    padding:36px 30px;
+    display:flex;
+    flex-direction:column;
+    background:
+      linear-gradient(155deg, var(--surface-0), var(--surface-1) 70%);
+    border:1px solid var(--line-strong);
+    box-shadow:
+      0 30px 60px -20px rgba(0,0,0,0.65),
+      0 2px 0 rgba(255,255,255,0.03) inset;
+    overflow:hidden;
+  }
+  .face.back{ transform:rotateY(180deg); }
+
+  .face::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:radial-gradient(280px 220px at var(--mx,50%) var(--my,-20%), rgba(255,255,255,0.10), transparent 65%);
+    mix-blend-mode:overlay;
+    pointer-events:none;
+  }
+  .face::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    border-radius:inherit;
+    padding:1px;
+    background:linear-gradient(155deg, rgba(228,194,122,0.55), transparent 30%, transparent 70%, rgba(228,194,122,0.25));
+    -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor;
+    mask-composite:exclude;
+    pointer-events:none;
+  }
+
+  /* ---------- front ---------- */
+
+  .avatar-ring{
+    width:88px;
+    height:88px;
+    border-radius:50%;
+    margin:4px auto 22px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:var(--bg-0);
+    border:1.5px solid var(--brass-1);
+    box-shadow:0 0 0 5px rgba(228,194,122,0.08), 0 12px 24px -10px rgba(0,0,0,0.6);
+  }
+  .avatar-ring svg{ width:38px; height:38px; color:var(--brass-0); }
+
+  .identity{
+    text-align:center;
+    flex:1;
+  }
+  .name{
+    font-family:'Fraunces', Georgia, serif;
+    font-optical-sizing:auto;
+    font-weight:480;
+    font-size:29px;
+    letter-spacing:0.005em;
+    margin:0 0 12px;
+    color:var(--paper);
+    text-wrap:balance;
+  }
+  .divider{
+    width:34px;
+    height:1px;
+    margin:0 auto 12px;
+    background:linear-gradient(90deg, transparent, var(--brass-1), transparent);
+  }
+  .role{
+    margin:0;
+    font-size:11.5px;
+    font-weight:600;
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+    color:var(--muted);
+  }
+
+  .hint{
+    margin-top:auto;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
+    color:var(--muted);
+    font-size:10.5px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    pointer-events:none;
+    opacity:0.75;
+  }
+  .hint svg{ width:13px; height:13px; animation:swirl 3.2s ease-in-out infinite; }
+  @keyframes swirl{
+    0%,100%{ transform:rotate(0deg); }
+    50%{ transform:rotate(180deg); }
+  }
+
+  /* ---------- back ---------- */
+
+  .intro{
+    font-family:'Fraunces', Georgia, serif;
+    font-style:italic;
+    font-weight:420;
+    font-size:15px;
+    line-height:1.65;
+    color:var(--paper);
+    margin:2px 0 18px;
+    text-wrap:balance;
+  }
+
+  .rule{
+    height:1px;
+    background:var(--line);
+    margin:0 0 18px;
+  }
+
+  .contacts{
+    display:flex;
+    flex-direction:column;
+    gap:13px;
+    margin-bottom:18px;
+  }
+  .contact-row{
+    display:flex;
+    align-items:center;
+    gap:11px;
+    color:var(--paper);
+    text-decoration:none;
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:12.5px;
+    letter-spacing:0.01em;
+    border-radius:8px;
+    padding:2px 4px;
+    margin:-2px -4px;
+    transition:color 0.15s ease, background 0.15s ease;
+  }
+  .contact-row:hover{ color:var(--brass-0); background:rgba(228,194,122,0.06); }
+  .contact-row svg{ width:15px; height:15px; flex:none; color:var(--brass-1); }
+
+  .socials{
+    margin-top:auto;
+    display:flex;
+    gap:10px;
+    justify-content:center;
+  }
+  .social{
+    width:38px;
+    height:38px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border:1px solid var(--line-strong);
+    color:var(--muted);
+    text-decoration:none;
+    transition:color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+  }
+  .social svg{ width:16px; height:16px; }
+  .social:hover{
+    color:var(--brass-0);
+    border-color:var(--brass-1);
+    box-shadow:0 0 0 5px rgba(228,194,122,0.08);
+    transform:translateY(-2px);
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    .tilt, .tilt.idle, .flipper{ transition:none !important; }
+    .hint svg{ animation:none; }
+  }
+</style>
+
+<div class="stage">
+  <div class="scene" id="scene">
+    <div class="tilt" id="tilt" tabindex="0" role="button" aria-pressed="false" aria-label="명함 카드, 클릭하거나 Enter를 눌러 뒤집기">
+      <div class="flipper" id="flipper">
+
+        <div class="face front">
+          <div class="avatar-ring">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="8" r="4"></circle>
+              <path d="M4 20c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"></path>
+            </svg>
+          </div>
+          <div class="identity">
+            <h1 class="name">이서연</h1>
+            <div class="divider"></div>
+            <p class="role">Brand &amp; UI Designer</p>
+          </div>
+          <div class="hint">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 12a9 9 0 0 1 15.3-6.36L21 8"></path>
+              <path d="M21 3v5h-5"></path>
+              <path d="M21 12a9 9 0 0 1-15.3 6.36L3 16"></path>
+              <path d="M3 21v-5h5"></path>
+            </svg>
+            <span>클릭하여 뒤집기</span>
+          </div>
+        </div>
+
+        <div class="face back">
+          <p class="intro">"보이지 않는 디테일까지 다듬는 것을 좋아하는 디자이너입니다."</p>
+          <div class="rule"></div>
+          <div class="contacts">
+            <a class="contact-row" href="mailto:hello@seoyeon.design" onclick="event.stopPropagation()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="m4 7 8 6 8-6"></path></svg>
+              hello@seoyeon.design
+            </a>
+            <a class="contact-row" href="tel:+821024567890" onclick="event.stopPropagation()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 4h3.2l1.4 4.4-2 1.6a12.5 12.5 0 0 0 5.9 5.9l1.6-2 4.4 1.4v3.2c0 1-.9 1.8-1.9 1.6C10.6 19 5 13.4 3.9 6.9 3.7 5.9 4.5 4 4.5 4z"></path></svg>
+              +82 10-2456-7890
+            </a>
+          </div>
+          <div class="rule"></div>
+          <div class="socials">
+            <a class="social" href="https://behance.net/seoyeondesign" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" aria-label="Behance">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h6.2c2.9 0 3.9 3.6 1.3 4.6 3.1.6 3.9 5.4-.5 5.4H3z"></path><path d="M3 12.2h6"></path><path d="M15.2 9.8h6M15 15.3c.4 1.2 1.4 1.9 2.9 1.9 2 0 3-1 3.1-2.7.1-2.3-1.4-3.6-3.2-3.6-2.1 0-3.4 1.5-3.4 3.7 0 2.4 1.4 4 3.5 4 1.4 0 2.5-.6 3-1.7"></path></svg>
+            </a>
+            <a class="social" href="https://linkedin.com/in/seoyeon-lee" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" aria-label="LinkedIn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="3"></rect><path d="M7.5 10.5v6M7.5 7.9v.1M11.5 16.5v-3.6c0-1.4 1-2.4 2.3-2.4 1.3 0 2.2 1 2.2 2.4v3.6M11.5 10.5v6"></path></svg>
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <p class="caption">샘플 프로필입니다 &mdash; <b>profile-card.html</b> 안의 이름·연락처·링크를 직접 수정해서 사용하세요.</p>
+</div>
+
+<script>
+(function(){
+  var scene = document.getElementById('scene');
+  var tilt = document.getElementById('tilt');
+  var flipper = document.getElementById('flipper');
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var maxTilt = 14;
+  var flipped = false;
+
+  function setTilt(px, py){
+    var rx = (py - 0.5) * -maxTilt;
+    var ry = (px - 0.5) * maxTilt;
+    tilt.style.setProperty('--rx', rx.toFixed(2) + 'deg');
+    tilt.style.setProperty('--ry', ry.toFixed(2) + 'deg');
+    tilt.style.setProperty('--mx', (px * 100).toFixed(1) + '%');
+    tilt.style.setProperty('--my', (py * 100).toFixed(1) + '%');
+  }
+
+  function resetTilt(){
+    tilt.classList.add('idle');
+    tilt.style.setProperty('--rx', '0deg');
+    tilt.style.setProperty('--ry', '0deg');
+    tilt.style.setProperty('--mx', '50%');
+    tilt.style.setProperty('--my', '-20%');
+  }
+
+  if (!reduceMotion){
+    tilt.addEventListener('pointerenter', function(){
+      tilt.classList.remove('idle');
+    });
+
+    tilt.addEventListener('pointermove', function(e){
+      var rect = tilt.getBoundingClientRect();
+      var px = (e.clientX - rect.left) / rect.width;
+      var py = (e.clientY - rect.top) / rect.height;
+      setTilt(px, py);
+    });
+
+    tilt.addEventListener('pointerleave', resetTilt);
+    resetTilt();
+  }
+
+  function toggleFlip(){
+    flipped = !flipped;
+    flipper.classList.toggle('flipped', flipped);
+    tilt.setAttribute('aria-pressed', String(flipped));
+  }
+
+  tilt.addEventListener('click', function(e){
+    if (e.target.closest('a')) return;
+    toggleFlip();
+  });
+
+  tilt.addEventListener('keydown', function(e){
+    if (e.key === 'Enter' || e.key === ' '){
+      e.preventDefault();
+      toggleFlip();
+    }
+  });
+})();
+</script>

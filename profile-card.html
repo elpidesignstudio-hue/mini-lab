@@ -1,0 +1,416 @@
+<title>Doodle Card</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg:#ffffff;
+    --card:#ffffff;
+    --ink:#1c1d22;
+    --muted:#75757e;
+    --line:rgba(28,29,34,0.09);
+    --line-strong:rgba(28,29,34,0.14);
+    --accent:#ff6a48;
+    --accent-ink:#c8431f;
+    --accent-soft:#ffe7dd;
+    --accent-soft-2:#fff1ea;
+  }
+
+  *{ box-sizing:border-box; }
+
+  body{
+    margin:0;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:64px 24px;
+    background:var(--bg);
+    font-family:'Sora', ui-sans-serif, system-ui, sans-serif;
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .stage{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:26px;
+  }
+
+  .caption{
+    text-align:center;
+    color:var(--muted);
+    font-size:12.5px;
+    letter-spacing:0.02em;
+    max-width:320px;
+    line-height:1.7;
+  }
+  .caption b{ color:var(--accent-ink); font-weight:600; }
+
+  .scene{
+    perspective:1500px;
+    width:340px;
+    height:460px;
+  }
+
+  .tilt{
+    width:100%;
+    height:100%;
+    position:relative;
+    transform:perspective(1500px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));
+    transition:transform 0.12s ease-out;
+    cursor:pointer;
+    outline:none;
+  }
+  .tilt.idle{
+    transition:transform 0.65s cubic-bezier(.22,1,.36,1);
+  }
+  .tilt:focus-visible{
+    outline:2px solid var(--accent);
+    outline-offset:10px;
+    border-radius:24px;
+  }
+
+  .flipper{
+    position:absolute;
+    inset:0;
+    transform-style:preserve-3d;
+    transition:transform 0.75s cubic-bezier(.5,.15,.15,1);
+    transform:rotateY(0deg);
+  }
+  .flipper.flipped{ transform:rotateY(180deg); }
+
+  .face{
+    position:absolute;
+    inset:0;
+    border-radius:22px;
+    backface-visibility:hidden;
+    -webkit-backface-visibility:hidden;
+    padding:34px 30px;
+    display:flex;
+    flex-direction:column;
+    background:var(--card);
+    border:1px solid var(--line-strong);
+    box-shadow:
+      0 26px 54px -26px rgba(28,29,34,0.28),
+      0 2px 0 rgba(28,29,34,0.02) inset;
+    overflow:hidden;
+  }
+  .face.back{ transform:rotateY(180deg); }
+
+  .face::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:radial-gradient(320px 260px at var(--mx,50%) var(--my,-10%), var(--accent-soft-2), transparent 62%);
+    opacity:0.9;
+    pointer-events:none;
+  }
+
+  /* ---------- front ---------- */
+
+  .portrait{
+    position:relative;
+    width:172px;
+    height:172px;
+    margin:0 auto 18px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:1;
+  }
+  .blob{
+    position:absolute;
+    inset:-14px;
+    width:calc(100% + 28px);
+    height:calc(100% + 28px);
+    z-index:0;
+  }
+  .character{
+    position:relative;
+    z-index:1;
+    width:142px;
+    height:auto;
+    color:var(--ink);
+  }
+
+  .identity{
+    text-align:center;
+    flex:1;
+    position:relative;
+    z-index:1;
+  }
+  .name{
+    font-family:'Bricolage Grotesque', ui-sans-serif, sans-serif;
+    font-weight:700;
+    font-size:27px;
+    letter-spacing:-0.01em;
+    margin:0 0 10px;
+    color:var(--ink);
+    text-wrap:balance;
+  }
+  .role{
+    display:inline-flex;
+    margin:0;
+    padding:6px 14px;
+    border-radius:999px;
+    background:var(--accent-soft);
+    color:var(--accent-ink);
+    font-size:12.5px;
+    font-weight:600;
+    letter-spacing:0.01em;
+  }
+
+  .hint{
+    position:relative;
+    z-index:1;
+    margin-top:auto;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
+    color:var(--muted);
+    font-size:10.5px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    pointer-events:none;
+    opacity:0.85;
+  }
+  .hint svg{ width:13px; height:13px; animation:swirl 3.2s ease-in-out infinite; }
+  @keyframes swirl{
+    0%,100%{ transform:rotate(0deg); }
+    50%{ transform:rotate(180deg); }
+  }
+
+  /* ---------- back ---------- */
+
+  .intro{
+    position:relative;
+    z-index:1;
+    font-family:'Bricolage Grotesque', ui-sans-serif, sans-serif;
+    font-weight:600;
+    font-size:16px;
+    line-height:1.6;
+    color:var(--ink);
+    margin:2px 0 18px;
+    text-wrap:balance;
+  }
+
+  .rule{
+    position:relative;
+    z-index:1;
+    height:1px;
+    background:var(--line);
+    margin:0 0 18px;
+  }
+
+  .contacts{
+    position:relative;
+    z-index:1;
+    display:flex;
+    flex-direction:column;
+    gap:13px;
+    margin-bottom:18px;
+  }
+  .contact-row{
+    display:flex;
+    align-items:center;
+    gap:11px;
+    color:var(--ink);
+    text-decoration:none;
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:12.5px;
+    letter-spacing:0.01em;
+    border-radius:8px;
+    padding:2px 4px;
+    margin:-2px -4px;
+    transition:color 0.15s ease, background 0.15s ease;
+  }
+  .contact-row:hover{ color:var(--accent-ink); background:var(--accent-soft-2); }
+  .contact-row svg{ width:15px; height:15px; flex:none; color:var(--accent); }
+
+  .socials{
+    position:relative;
+    z-index:1;
+    margin-top:auto;
+    display:flex;
+    gap:10px;
+    justify-content:center;
+  }
+  .social{
+    width:38px;
+    height:38px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border:1px solid var(--line-strong);
+    color:var(--muted);
+    text-decoration:none;
+    transition:color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+  }
+  .social svg{ width:16px; height:16px; }
+  .social:hover{
+    color:var(--accent-ink);
+    border-color:var(--accent);
+    box-shadow:0 0 0 5px var(--accent-soft);
+    transform:translateY(-2px);
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    .tilt, .tilt.idle, .flipper{ transition:none !important; }
+    .hint svg{ animation:none; }
+  }
+</style>
+
+<div class="stage">
+  <div class="scene" id="scene">
+    <div class="tilt" id="tilt" tabindex="0" role="button" aria-pressed="false" aria-label="명함 카드, 클릭하거나 Enter를 눌러 뒤집기">
+      <div class="flipper" id="flipper">
+
+        <div class="face front">
+          <div class="portrait">
+            <svg class="blob" viewBox="0 0 200 200" aria-hidden="true">
+              <g transform="translate(100,100)">
+                <path fill="var(--accent-soft)" d="M45.3,-58.4C59.6,-49.1,72.7,-36.7,76.9,-21.6C81.1,-6.5,76.4,11.3,67.6,25.7C58.8,40.1,45.9,51.1,31.2,58.6C16.5,66.1,-0.1,70.1,-16.4,67.2C-32.7,64.3,-48.7,54.5,-60.0,40.6C-71.2,26.7,-77.7,8.7,-76.0,-8.4C-74.2,-25.5,-64.2,-41.7,-50.6,-51.3C-37.0,-60.9,-18.5,-63.9,-1.4,-62.1C15.7,-60.3,31.4,-54.7,45.3,-58.4Z"></path>
+              </g>
+            </svg>
+            <svg class="character" viewBox="0 0 220 250" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M78,48 C74,34 82,22 90,34 C93,18 103,10 106,26 C110,8 120,8 122,24 C128,10 138,16 134,32 C142,26 148,36 140,46"></path>
+              <path d="M128,30 C140,20 150,26 146,40"></path>
+              <circle cx="110" cy="60" r="30"></circle>
+              <path d="M98,58 q4,-5 8,0" stroke-width="2.5"></path>
+              <path d="M118,58 q4,-5 8,0" stroke-width="2.5"></path>
+              <ellipse cx="110" cy="72" rx="4" ry="6" stroke-width="2.5"></ellipse>
+              <path d="M102,88 L102,98"></path>
+              <path d="M118,88 L118,98"></path>
+              <path d="M84,102 C68,108 54,116 58,128 C50,140 58,152 66,158"></path>
+              <path d="M66,158 L82,182"></path>
+              <path d="M82,182 C70,190 74,206 90,204 C104,202 100,188 88,186"></path>
+              <path d="M136,102 C150,108 158,120 152,134 C158,148 150,162 146,168"></path>
+              <path d="M78,105 C90,95 130,95 142,105"></path>
+              <path d="M78,105 C70,140 66,180 62,215 C86,224 134,224 158,215 C154,180 150,140 142,105"></path>
+              <rect x="96" y="150" width="28" height="22" rx="4" stroke-width="2.5"></rect>
+              <path d="M96,158 L124,158" stroke-width="2.5"></path>
+              <ellipse cx="108" cy="188" rx="58" ry="11"></ellipse>
+              <path d="M50,188 C46,215 66,236 108,238 C150,236 170,215 166,188"></path>
+              <rect x="14" y="196" width="22" height="40" rx="4" stroke-width="2.5"></rect>
+              <rect x="20" y="186" width="10" height="12" stroke-width="2.5"></rect>
+              <rect x="18" y="180" width="14" height="8" rx="2" stroke-width="2.5"></rect>
+              <path d="M14,214 L36,214" stroke-width="2.5"></path>
+              <circle cx="70" cy="168" r="2" fill="currentColor" stroke="none"></circle>
+              <circle cx="150" cy="150" r="2" fill="currentColor" stroke="none"></circle>
+              <circle cx="160" cy="172" r="2" fill="currentColor" stroke="none"></circle>
+              <circle cx="46" cy="175" r="2" fill="currentColor" stroke="none"></circle>
+              <circle cx="96" cy="168" r="2" fill="currentColor" stroke="none"></circle>
+            </svg>
+          </div>
+          <div class="identity">
+            <h1 class="name">정원영</h1>
+            <span class="role">브랜드 및 제품 디자이너</span>
+          </div>
+          <div class="hint">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 12a9 9 0 0 1 15.3-6.36L21 8"></path>
+              <path d="M21 3v5h-5"></path>
+              <path d="M21 12a9 9 0 0 1-15.3 6.36L3 16"></path>
+              <path d="M3 21v-5h5"></path>
+            </svg>
+            <span>클릭하여 뒤집기</span>
+          </div>
+        </div>
+
+        <div class="face back">
+          <p class="intro">"브랜드와 제품 사이의 디테일을 연결하는 디자이너입니다."</p>
+          <div class="rule"></div>
+          <div class="contacts">
+            <a class="contact-row" href="mailto:hello@wonyoung.design" onclick="event.stopPropagation()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="m4 7 8 6 8-6"></path></svg>
+              hello@wonyoung.design
+            </a>
+            <a class="contact-row" href="tel:+821024567890" onclick="event.stopPropagation()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 4h3.2l1.4 4.4-2 1.6a12.5 12.5 0 0 0 5.9 5.9l1.6-2 4.4 1.4v3.2c0 1-.9 1.8-1.9 1.6C10.6 19 5 13.4 3.9 6.9 3.7 5.9 4.5 4 4.5 4z"></path></svg>
+              +82 10-2456-7890
+            </a>
+          </div>
+          <div class="rule"></div>
+          <div class="socials">
+            <a class="social" href="https://behance.net/wonyoungjeong" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" aria-label="Behance">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h6.2c2.9 0 3.9 3.6 1.3 4.6 3.1.6 3.9 5.4-.5 5.4H3z"></path><path d="M3 12.2h6"></path><path d="M15.2 9.8h6M15 15.3c.4 1.2 1.4 1.9 2.9 1.9 2 0 3-1 3.1-2.7.1-2.3-1.4-3.6-3.2-3.6-2.1 0-3.4 1.5-3.4 3.7 0 2.4 1.4 4 3.5 4 1.4 0 2.5-.6 3-1.7"></path></svg>
+            </a>
+            <a class="social" href="https://linkedin.com/in/wonyoung-jeong" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" aria-label="LinkedIn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="3"></rect><path d="M7.5 10.5v6M7.5 7.9v.1M11.5 16.5v-3.6c0-1.4 1-2.4 2.3-2.4 1.3 0 2.2 1 2.2 2.4v3.6M11.5 10.5v6"></path></svg>
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <p class="caption">이름·직함만 반영했어요 &mdash; <b>profile-card.html</b> 안의 이메일·전화번호·링크·소개는 실제 정보로 바꿔서 사용하세요.</p>
+</div>
+
+<script>
+(function(){
+  var scene = document.getElementById('scene');
+  var tilt = document.getElementById('tilt');
+  var flipper = document.getElementById('flipper');
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var maxTilt = 14;
+  var flipped = false;
+
+  function setTilt(px, py){
+    var rx = (py - 0.5) * -maxTilt;
+    var ry = (px - 0.5) * maxTilt;
+    tilt.style.setProperty('--rx', rx.toFixed(2) + 'deg');
+    tilt.style.setProperty('--ry', ry.toFixed(2) + 'deg');
+    tilt.style.setProperty('--mx', (px * 100).toFixed(1) + '%');
+    tilt.style.setProperty('--my', (py * 100).toFixed(1) + '%');
+  }
+
+  function resetTilt(){
+    tilt.classList.add('idle');
+    tilt.style.setProperty('--rx', '0deg');
+    tilt.style.setProperty('--ry', '0deg');
+    tilt.style.setProperty('--mx', '50%');
+    tilt.style.setProperty('--my', '-10%');
+  }
+
+  if (!reduceMotion){
+    tilt.addEventListener('pointerenter', function(){
+      tilt.classList.remove('idle');
+    });
+
+    tilt.addEventListener('pointermove', function(e){
+      var rect = tilt.getBoundingClientRect();
+      var px = (e.clientX - rect.left) / rect.width;
+      var py = (e.clientY - rect.top) / rect.height;
+      setTilt(px, py);
+    });
+
+    tilt.addEventListener('pointerleave', resetTilt);
+    resetTilt();
+  }
+
+  function toggleFlip(){
+    flipped = !flipped;
+    flipper.classList.toggle('flipped', flipped);
+    tilt.setAttribute('aria-pressed', String(flipped));
+  }
+
+  tilt.addEventListener('click', function(e){
+    if (e.target.closest('a')) return;
+    toggleFlip();
+  });
+
+  tilt.addEventListener('keydown', function(e){
+    if (e.key === 'Enter' || e.key === ' '){
+      e.preventDefault();
+      toggleFlip();
+    }
+  });
+})();
+</script>

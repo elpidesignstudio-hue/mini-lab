@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Focus Flow — 집중 타이머</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f7f6f4;
+    --card:#ffffff;
+    --ink:#1c1d22;
+    --muted:#75757e;
+    --line:rgba(28,29,34,0.09);
+    --line-strong:rgba(28,29,34,0.16);
+    --accent:#ff6a48;
+    --accent-ink:#c8431f;
+    --accent-soft:#ffe7dd;
+    --rest:#2f9e8f;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0; padding:40px 20px;
+    background:
+      radial-gradient(900px 500px at 12% -10%, #fff2ec 0%, rgba(255,242,236,0) 60%),
+      var(--bg);
+    font-family:'Sora', ui-sans-serif, system-ui, sans-serif;
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .wrap{ width:100%; max-width:900px; }
+  .top{ display:flex; align-items:baseline; justify-content:space-between; gap:16px; margin-bottom:18px; padding:0 4px; flex-wrap:wrap; }
+  .brand{ font-family:'Bricolage Grotesque',serif; font-size:24px; font-weight:700; letter-spacing:-0.01em; }
+  .brand span{ color:var(--accent); }
+  .hint{ font-size:12px; color:var(--muted); }
+  .hint kbd{
+    font-family:'JetBrains Mono',monospace; font-size:11px;
+    border:1px solid var(--line-strong); border-bottom-width:2px; border-radius:6px;
+    padding:1px 5px; background:#fff; color:var(--ink);
+  }
+
+  .grid{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:18px; }
+  @media (max-width:760px){ .grid{ grid-template-columns:1fr; } }
+
+  .panel{
+    background:var(--card); border:1px solid var(--line); border-radius:22px;
+    padding:26px; box-shadow:0 18px 40px -30px rgba(28,29,34,0.45);
+  }
+
+  .modes{ display:flex; gap:6px; background:#f2f1ef; padding:5px; border-radius:14px; margin-bottom:24px; }
+  .modes button{
+    flex:1; border:0; background:transparent; border-radius:10px; padding:9px 6px; cursor:pointer;
+    font-family:inherit; font-size:12.5px; font-weight:600; color:var(--muted); transition:.18s;
+  }
+  .modes button.on{ background:#fff; color:var(--ink); box-shadow:0 2px 8px -3px rgba(0,0,0,.3); }
+
+  .ringbox{ position:relative; width:250px; height:250px; margin:0 auto; }
+  .ringbox svg{ width:100%; height:100%; transform:rotate(-90deg); }
+  .track{ fill:none; stroke:#efedea; stroke-width:12; }
+  .prog{ fill:none; stroke:var(--accent); stroke-width:12; stroke-linecap:round; transition:stroke-dashoffset .35s linear, stroke .3s; }
+  body.rest .prog{ stroke:var(--rest); }
+  .readout{
+    position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:6px;
+  }
+  .time{ font-family:'JetBrains Mono',monospace; font-size:48px; font-weight:500; letter-spacing:-0.02em; font-variant-numeric:tabular-nums; }
+  .phase{ font-size:11.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-ink); font-weight:600; }
+  body.rest .phase{ color:var(--rest); }
+
+  .controls{ display:flex; gap:10px; justify-content:center; margin-top:26px; }
+  .btn{
+    font-family:inherit; font-size:13.5px; font-weight:600; cursor:pointer;
+    border-radius:12px; padding:12px 22px; border:1px solid var(--line-strong);
+    background:#fff; color:var(--ink); transition:.16s;
+  }
+  .btn:hover{ transform:translateY(-1px); }
+  .btn.primary{ background:var(--accent); border-color:var(--accent); color:#fff; box-shadow:0 10px 20px -12px var(--accent); }
+  body.rest .btn.primary{ background:var(--rest); border-color:var(--rest); box-shadow:0 10px 20px -12px var(--rest); }
+
+  .dots{ display:flex; gap:7px; justify-content:center; margin-top:22px; align-items:center; }
+  .dot{ width:9px; height:9px; border-radius:50%; background:#e6e3df; }
+  .dot.done{ background:var(--accent); }
+  .dots small{ margin-left:6px; color:var(--muted); font-size:11.5px; }
+
+  .ptitle{ font-size:13px; font-weight:600; margin:0 0 14px; display:flex; justify-content:space-between; align-items:center; }
+  .ptitle em{ font-style:normal; color:var(--muted); font-weight:400; font-size:11.5px; }
+  .adder{ display:flex; gap:8px; margin-bottom:14px; }
+  .adder input{
+    flex:1; min-width:0; font-family:inherit; font-size:13.5px; color:var(--ink);
+    border:1px solid var(--line-strong); border-radius:12px; padding:11px 13px; background:#fdfdfc; outline:none;
+  }
+  .adder input:focus{ border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+  .adder button{
+    border:0; background:var(--ink); color:#fff; border-radius:12px; padding:0 16px;
+    font-family:inherit; font-weight:600; font-size:13.5px; cursor:pointer;
+  }
+  ul.tasks{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; max-height:340px; overflow:auto; }
+  .task{
+    display:flex; align-items:center; gap:11px; padding:11px 12px;
+    border:1px solid var(--line); border-radius:14px; background:#fdfdfc; transition:.16s;
+  }
+  .task.active{ border-color:var(--accent); background:var(--accent-soft); }
+  .task.done .label{ text-decoration:line-through; color:var(--muted); }
+  .check{
+    width:19px; height:19px; flex:0 0 auto; border-radius:50%; border:1.5px solid var(--line-strong);
+    background:#fff; cursor:pointer; display:grid; place-items:center; padding:0;
+  }
+  .task.done .check{ background:var(--accent); border-color:var(--accent); }
+  .check svg{ width:11px; height:11px; stroke:#fff; stroke-width:3; fill:none; opacity:0; }
+  .task.done .check svg{ opacity:1; }
+  .label{ flex:1; min-width:0; font-size:13.5px; cursor:pointer; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pips{ font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--accent-ink); letter-spacing:1px; }
+  .del{ border:0; background:transparent; color:#bfbdb9; cursor:pointer; font-size:16px; line-height:1; padding:2px 4px; }
+  .del:hover{ color:var(--accent-ink); }
+  .empty{ text-align:center; color:var(--muted); font-size:12.5px; padding:26px 10px; line-height:1.7; }
+  .foot{ margin-top:16px; padding-top:14px; border-top:1px dashed var(--line-strong); display:flex; justify-content:space-between; font-size:11.5px; color:var(--muted); gap:10px; }
+  .foot b{ color:var(--accent-ink); }
+  a.back{ color:var(--muted); text-decoration:none; }
+  a.back:hover{ color:var(--accent-ink); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand">Focus <span>Flow</span></div>
+    <div class="hint"><kbd>Space</kbd> 시작/멈춤 · <kbd>R</kbd> 리셋 · <a class="back" href="index.html">← mini-lab</a></div>
+  </div>
+
+  <div class="grid">
+    <section class="panel">
+      <div class="modes">
+        <button data-mode="focus" class="on">집중 25</button>
+        <button data-mode="short">휴식 5</button>
+        <button data-mode="long">긴 휴식 15</button>
+      </div>
+
+      <div class="ringbox">
+        <svg viewBox="0 0 120 120">
+          <circle class="track" cx="60" cy="60" r="52"></circle>
+          <circle class="prog" id="prog" cx="60" cy="60" r="52"></circle>
+        </svg>
+        <div class="readout">
+          <div class="phase" id="phase">집중</div>
+          <div class="time" id="time">25:00</div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="btn primary" id="toggle">시작</button>
+        <button class="btn" id="reset">리셋</button>
+      </div>
+
+      <div class="dots" id="dots"></div>
+    </section>
+
+    <section class="panel">
+      <h2 class="ptitle">오늘 할 일 <em id="counter">0 / 0</em></h2>
+      <form class="adder" id="adder">
+        <input id="newtask" placeholder="무엇에 집중할까요?" maxlength="80" autocomplete="off">
+        <button type="submit">추가</button>
+      </form>
+      <ul class="tasks" id="list"></ul>
+      <div class="foot">
+        <span>현재 집중: <b id="current">—</b></span>
+        <span>누적 <b id="total">0</b> 세션</span>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+(function(){
+  var DUR = { focus:25*60, short:5*60, long:15*60 };
+  var LABEL = { focus:'집중', short:'짧은 휴식', long:'긴 휴식' };
+  var R = 52, CIRC = 2 * Math.PI * R;
+
+  var progEl   = document.getElementById('prog');
+  var timeEl   = document.getElementById('time');
+  var phaseEl  = document.getElementById('phase');
+  var toggleEl = document.getElementById('toggle');
+  var resetEl  = document.getElementById('reset');
+  var dotsEl   = document.getElementById('dots');
+  var listEl   = document.getElementById('list');
+  var adderEl  = document.getElementById('adder');
+  var inputEl  = document.getElementById('newtask');
+  var curEl    = document.getElementById('current');
+  var totalEl  = document.getElementById('total');
+  var countEl  = document.getElementById('counter');
+
+  progEl.style.strokeDasharray = CIRC;
+
+  var mode = 'focus';
+  var left = DUR[mode];
+  var running = false;
+  var endAt = 0;
+  var tick = null;
+
+  function today(){ var d = new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
+
+  function load(){
+    try{
+      var raw = localStorage.getItem('focusflow.v1');
+      if (raw){
+        var d = JSON.parse(raw);
+        if (d && Array.isArray(d.tasks)){
+          return { tasks:d.tasks, activeId:d.activeId||null, cycles:d.cycles||0, total:d.total||0, day:d.day||today() };
+        }
+      }
+    }catch(e){}
+    return { tasks:[], activeId:null, cycles:0, total:0, day:today() };
+  }
+  function save(){ try{ localStorage.setItem('focusflow.v1', JSON.stringify(state)); }catch(e){} }
+
+  var state = load();
+  if (state.day !== today()){ state.day = today(); state.cycles = 0; state.total = 0; save(); }
+
+  /* ---------- timer ---------- */
+  function setMode(m){
+    mode = m;
+    left = DUR[m];
+    document.body.classList.toggle('rest', m !== 'focus');
+    phaseEl.textContent = LABEL[m];
+    Array.prototype.forEach.call(document.querySelectorAll('.modes button'), function(b){
+      b.classList.toggle('on', b.getAttribute('data-mode') === m);
+    });
+    stop();
+  }
+
+  function fmt(s){
+    s = Math.max(0, Math.round(s));
+    var m = Math.floor(s/60), r = s % 60;
+    return (m<10?'0':'') + m + ':' + (r<10?'0':'') + r;
+  }
+
+  function render(){
+    timeEl.textContent = fmt(left);
+    progEl.style.strokeDashoffset = CIRC * (1 - left / DUR[mode]);
+    document.title = (running ? fmt(left) + ' · ' : '') + 'Focus Flow';
+    toggleEl.textContent = running ? '일시정지' : (Math.round(left) === DUR[mode] ? '시작' : '이어서');
+  }
+
+  function start(){
+    if (running) return;
+    running = true;
+    endAt = Date.now() + left * 1000;
+    tick = setInterval(function(){
+      left = (endAt - Date.now()) / 1000;
+      if (left <= 0){ left = 0; complete(); return; }
+      render();
+    }, 200);
+    render();
+  }
+
+  function stop(){
+    running = false;
+    if (tick){ clearInterval(tick); tick = null; }
+    render();
+  }
+
+  function complete(){
+    stop();
+    beep();
+    flash();
+    if (mode === 'focus'){
+      state.cycles++;
+      state.total++;
+      var t = activeTask();
+      if (t) t.pomos = (t.pomos || 0) + 1;
+      save();
+      renderTasks();
+      renderDots();
+      setMode(state.cycles % 4 === 0 ? 'long' : 'short');
+    } else {
+      setMode('focus');
+    }
+  }
+
+  function flash(){
+    if (!document.body.animate) return;
+    document.body.animate(
+      [{ filter:'brightness(1)' }, { filter:'brightness(1.07)' }, { filter:'brightness(1)' }],
+      { duration:700, easing:'ease-out' }
+    );
+  }
+
+  function beep(){
+    try{
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      var ctx = new AC(), t0 = ctx.currentTime;
+      [660, 880].forEach(function(f, i){
+        var o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'sine';
+        o.frequency.value = f;
+        g.gain.setValueAtTime(0, t0 + i*0.18);
+        g.gain.linearRampToValueAtTime(0.16, t0 + i*0.18 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.001, t0 + i*0.18 + 0.35);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(t0 + i*0.18);
+        o.stop(t0 + i*0.18 + 0.4);
+      });
+      setTimeout(function(){ ctx.close(); }, 1400);
+    }catch(e){}
+  }
+
+  function renderDots(){
+    var n = state.cycles % 4, html = '';
+    for (var i = 0; i < 4; i++) html += '<div class="dot' + (i < n ? ' done' : '') + '"></div>';
+    dotsEl.innerHTML = html + '<small>4세션마다 긴 휴식</small>';
+    totalEl.textContent = state.total;
+  }
+
+  toggleEl.addEventListener('click', function(){ running ? stop() : start(); });
+  resetEl.addEventListener('click', function(){ stop(); left = DUR[mode]; render(); });
+  Array.prototype.forEach.call(document.querySelectorAll('.modes button'), function(b){
+    b.addEventListener('click', function(){ setMode(b.getAttribute('data-mode')); });
+  });
+  document.addEventListener('keydown', function(e){
+    if (e.target && e.target.tagName === 'INPUT') return;
+    if (e.code === 'Space'){ e.preventDefault(); running ? stop() : start(); }
+    if (e.key === 'r' || e.key === 'R'){ stop(); left = DUR[mode]; render(); }
+  });
+
+  /* ---------- tasks ---------- */
+  function activeTask(){
+    for (var i = 0; i < state.tasks.length; i++){
+      if (state.tasks[i].id === state.activeId) return state.tasks[i];
+    }
+    return null;
+  }
+
+  function renderTasks(){
+    listEl.innerHTML = '';
+
+    if (!state.tasks.length){
+      var e = document.createElement('li');
+      e.className = 'empty';
+      e.innerHTML = '아직 할 일이 없어요.<br>하나 적고 <b>Space</b>를 눌러 시작해보세요.';
+      listEl.appendChild(e);
+    }
+
+    state.tasks.forEach(function(t){
+      var li = document.createElement('li');
+      li.className = 'task' + (t.done ? ' done' : '') + (t.id === state.activeId ? ' active' : '');
+
+      var chk = document.createElement('button');
+      chk.className = 'check';
+      chk.title = '완료 표시';
+      chk.innerHTML = '<svg viewBox="0 0 12 12"><polyline points="1.5,6.5 4.5,9.5 10.5,2.5"/></svg>';
+      chk.addEventListener('click', function(){
+        t.done = !t.done;
+        if (t.done && state.activeId === t.id) state.activeId = null;
+        save(); renderTasks();
+      });
+
+      var lab = document.createElement('div');
+      lab.className = 'label';
+      lab.textContent = t.text;
+      lab.title = '클릭하면 지금 집중할 일로 지정';
+      lab.addEventListener('click', function(){
+        state.activeId = (state.activeId === t.id) ? null : t.id;
+        save(); renderTasks();
+      });
+
+      var pips = document.createElement('div');
+      pips.className = 'pips';
+      pips.textContent = t.pomos ? (t.pomos > 5 ? '●●●●● +' + (t.pomos - 5) : new Array(t.pomos + 1).join('●')) : '';
+
+      var del = document.createElement('button');
+      del.className = 'del';
+      del.textContent = '×';
+      del.title = '삭제';
+      del.addEventListener('click', function(){
+        state.tasks = state.tasks.filter(function(x){ return x.id !== t.id; });
+        if (state.activeId === t.id) state.activeId = null;
+        save(); renderTasks();
+      });
+
+      li.appendChild(chk); li.appendChild(lab); li.appendChild(pips); li.appendChild(del);
+      listEl.appendChild(li);
+    });
+
+    var done = state.tasks.filter(function(t){ return t.done; }).length;
+    countEl.textContent = done + ' / ' + state.tasks.length;
+    var a = activeTask();
+    curEl.textContent = a ? a.text : '—';
+  }
+
+  adderEl.addEventListener('submit', function(e){
+    e.preventDefault();
+    var v = inputEl.value.trim();
+    if (!v) return;
+    var id = String(Date.now()) + Math.random().toString(36).slice(2, 6);
+    state.tasks.push({ id:id, text:v, done:false, pomos:0 });
+    if (!state.activeId) state.activeId = id;
+    inputEl.value = '';
+    save(); renderTasks();
+  });
+
+  setMode('focus');
+  renderTasks();
+  renderDots();
+})();
+</script>
+</body>
+</html>

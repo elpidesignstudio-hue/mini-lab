@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bloom — 만화경 드로잉</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0e0d13;
+    --panel:rgba(255,255,255,0.055);
+    --line:rgba(255,255,255,0.13);
+    --ink:#f3f1ee;
+    --muted:rgba(243,241,238,0.5);
+    --accent:#ff6a48;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:'Sora', ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased;
+    display:flex; flex-direction:column;
+    overflow:hidden;
+  }
+
+  header{
+    display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;
+    padding:16px 22px 12px;
+  }
+  .brand{ font-family:'Bricolage Grotesque',serif; font-size:22px; font-weight:700; }
+  .brand span{ color:var(--accent); }
+  .tag{ font-size:12px; color:var(--muted); }
+  .tag a{ color:var(--muted); text-decoration:none; }
+  .tag a:hover{ color:var(--accent); }
+
+  .stage{ flex:1; min-height:0; position:relative; margin:0 18px; }
+  canvas{
+    width:100%; height:100%; display:block; border-radius:20px;
+    border:1px solid var(--line); cursor:crosshair; touch-action:none;
+    background:#12111a;
+  }
+  .ghost{
+    position:absolute; inset:0; display:grid; place-items:center;
+    pointer-events:none; text-align:center; color:var(--muted);
+    font-size:13px; line-height:1.9; transition:opacity .45s;
+  }
+  .ghost b{ color:var(--ink); font-weight:600; }
+  .ghost.hide{ opacity:0; }
+
+  .bar{
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    padding:14px 22px 18px;
+  }
+  .ctl{
+    display:flex; align-items:center; gap:9px;
+    background:var(--panel); border:1px solid var(--line);
+    border-radius:14px; padding:9px 13px;
+  }
+  .ctl label{ font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+  .ctl output{ font-family:'JetBrains Mono',monospace; font-size:12px; min-width:22px; text-align:right; }
+  input[type=range]{
+    -webkit-appearance:none; appearance:none; width:112px; height:3px;
+    background:rgba(255,255,255,.2); border-radius:3px; outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:15px; height:15px; border-radius:50%;
+    background:var(--accent); cursor:pointer; border:2px solid #fff2;
+  }
+  input[type=range]::-moz-range-thumb{
+    width:15px; height:15px; border-radius:50%; background:var(--accent);
+    cursor:pointer; border:2px solid #fff2;
+  }
+
+  .swatches{ display:flex; gap:6px; }
+  .sw{
+    width:24px; height:24px; border-radius:8px; border:2px solid transparent;
+    cursor:pointer; padding:0; transition:.15s;
+  }
+  .sw:hover{ transform:translateY(-2px); }
+  .sw.on{ border-color:#fff; }
+
+  button.act{
+    font-family:inherit; font-size:12.5px; font-weight:600; color:var(--ink);
+    background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:11px 16px; cursor:pointer; transition:.15s;
+  }
+  button.act:hover{ background:rgba(255,255,255,.11); }
+  button.act.on{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  button.act.strong{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  .spacer{ flex:1; }
+  @media (max-width:720px){ .spacer{ display:none; } .bar{ gap:10px; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">Bloom<span>.</span></div>
+  <div class="tag">드래그하면 대칭으로 피어납니다 · <a href="index.html">← mini-lab</a></div>
+</header>
+
+<div class="stage">
+  <canvas id="cv"></canvas>
+  <div class="ghost" id="ghost">
+    캔버스를 <b>드래그</b>해 보세요.<br>
+    중심을 지나며 그릴수록 무늬가 겹쳐 꽃이 됩니다.
+  </div>
+</div>
+
+<div class="bar">
+  <div class="ctl">
+    <label for="sym">대칭</label>
+    <input type="range" id="sym" min="2" max="16" step="1" value="8">
+    <output id="symOut">8</output>
+  </div>
+  <div class="ctl">
+    <label for="size">굵기</label>
+    <input type="range" id="size" min="1" max="26" step="1" value="7">
+    <output id="sizeOut">7</output>
+  </div>
+  <div class="ctl">
+    <label>색</label>
+    <div class="swatches" id="swatches"></div>
+  </div>
+  <button class="act on" id="mirror">거울</button>
+  <div class="spacer"></div>
+  <button class="act" id="auto">자동 피어남</button>
+  <button class="act" id="undo">되돌리기</button>
+  <button class="act" id="clear">지우기</button>
+  <button class="act strong" id="save">PNG 저장</button>
+</div>
+
+<script>
+(function(){
+  var cv     = document.getElementById('cv');
+  var ctx    = cv.getContext('2d');
+  var ghost  = document.getElementById('ghost');
+  var symEl  = document.getElementById('sym');
+  var sizeEl = document.getElementById('size');
+  var symOut = document.getElementById('symOut');
+  var sizeOut= document.getElementById('sizeOut');
+
+  var BG = '#12111a';
+
+  var PALETTES = [
+    { name:'노을',   chip:'linear-gradient(135deg,#ff6a48,#ffc46b)', hue:[8, 48],   sat:92, light:62 },
+    { name:'심해',   chip:'linear-gradient(135deg,#4dd0ff,#7b6cff)', hue:[185, 265], sat:88, light:62 },
+    { name:'네온',   chip:'linear-gradient(135deg,#ff5ec4,#5cff9d)', hue:[300, 460], sat:96, light:64 },
+    { name:'이끼',   chip:'linear-gradient(135deg,#8fd66b,#2f9e8f)', hue:[95, 175],  sat:60, light:58 },
+    { name:'백묵',   chip:'linear-gradient(135deg,#ffffff,#b9b6c9)', hue:[0, 0],     sat:0,  light:92 }
+  ];
+  var palIdx = 0;
+
+  var sw = document.getElementById('swatches');
+  PALETTES.forEach(function(p, i){
+    var b = document.createElement('button');
+    b.className = 'sw' + (i === 0 ? ' on' : '');
+    b.style.background = p.chip;
+    b.title = p.name;
+    b.addEventListener('click', function(){
+      palIdx = i;
+      Array.prototype.forEach.call(sw.children, function(c, j){ c.classList.toggle('on', j === i); });
+    });
+    sw.appendChild(b);
+  });
+
+  /* ---------- canvas sizing (keeps artwork) ---------- */
+  var W = 0, H = 0, dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+  function resize(){
+    var r = cv.getBoundingClientRect();
+    var nw = Math.max(1, Math.round(r.width  * dpr));
+    var nh = Math.max(1, Math.round(r.height * dpr));
+    if (nw === cv.width && nh === cv.height) return;
+
+    var old = null;
+    if (cv.width && cv.height){
+      old = document.createElement('canvas');
+      old.width = cv.width; old.height = cv.height;
+      old.getContext('2d').drawImage(cv, 0, 0);
+    }
+    cv.width = nw; cv.height = nh;
+    W = nw; H = nh;
+    ctx.fillStyle = BG;
+    ctx.fillRect(0, 0, W, H);
+    if (old) ctx.drawImage(old, 0, 0, old.width, old.height, 0, 0, W, H);
+    undoStack.length = 0;
+  }
+
+  /* ---------- undo ---------- */
+  var undoStack = [];
+  function pushUndo(){
+    try{
+      undoStack.push(ctx.getImageData(0, 0, W, H));
+      if (undoStack.length > 8) undoStack.shift();
+    }catch(e){}
+  }
+  function popUndo(){
+    var img = undoStack.pop();
+    if (img) ctx.putImageData(img, 0, 0);
+  }
+
+  /* ---------- drawing ---------- */
+  var hue = 0, drawing = false, last = null, mirror = true;
+
+  function pickColor(t){
+    var p = PALETTES[palIdx];
+    var span = p.hue[1] - p.hue[0];
+    var h = span === 0 ? p.hue[0] : (p.hue[0] + ((hue + t * 26) % span));
+    return 'hsla(' + (h % 360) + ',' + p.sat + '%,' + p.light + '%,0.85)';
+  }
+
+  function stamp(x0, y0, x1, y1, width, color){
+    var n = parseInt(symEl.value, 10);
+    var cx = W / 2, cy = H / 2;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = width;
+    ctx.strokeStyle = color;
+    ctx.shadowBlur = width * 2.2;
+    ctx.shadowColor = color;
+
+    var ax = x0 - cx, ay = y0 - cy, bx = x1 - cx, by = y1 - cy;
+
+    for (var i = 0; i < n; i++){
+      ctx.rotate((Math.PI * 2) / n);
+      ctx.beginPath();
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(bx, by);
+      ctx.stroke();
+      if (mirror){
+        ctx.beginPath();
+        ctx.moveTo(ax, -ay);
+        ctx.lineTo(bx, -by);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+  function pos(e){
+    var r = cv.getBoundingClientRect();
+    return { x:(e.clientX - r.left) * dpr, y:(e.clientY - r.top) * dpr };
+  }
+
+  cv.addEventListener('pointerdown', function(e){
+    cv.setPointerCapture(e.pointerId);
+    pushUndo();
+    drawing = true;
+    last = pos(e);
+    hue = (hue + 37) % 360;
+    ghost.classList.add('hide');
+    stamp(last.x, last.y, last.x + 0.1, last.y + 0.1, +sizeEl.value * dpr, pickColor(0));
+  });
+
+  cv.addEventListener('pointermove', function(e){
+    if (!drawing) return;
+    var p = pos(e);
+    var dx = p.x - last.x, dy = p.y - last.y;
+    var speed = Math.sqrt(dx*dx + dy*dy);
+    var w = (+sizeEl.value * dpr) * (1 + Math.min(speed / 90, 1.1));
+    stamp(last.x, last.y, p.x, p.y, w, pickColor(speed));
+    last = p;
+  });
+
+  function end(){ drawing = false; last = null; }
+  cv.addEventListener('pointerup', end);
+  cv.addEventListener('pointercancel', end);
+  cv.addEventListener('pointerleave', end);
+
+  /* ---------- auto bloom ---------- */
+  var autoOn = false, autoRaf = null, t = 0, autoPrev = null;
+  var autoBtn = document.getElementById('auto');
+
+  function autoStep(){
+    if (!autoOn) return;
+    t += 0.035;
+    var cx = W/2, cy = H/2;
+    var rad = Math.min(W, H) * (0.13 + 0.29 * (0.5 + 0.5 * Math.sin(t * 0.23)));
+    var a = t * 1.9;
+    var p = { x: cx + Math.cos(a) * rad, y: cy + Math.sin(a * 1.37) * rad };
+    if (autoPrev){
+      hue = (hue + 0.7) % 360;
+      stamp(autoPrev.x, autoPrev.y, p.x, p.y, (+sizeEl.value * dpr) * 0.75, pickColor(0));
+    }
+    autoPrev = p;
+    autoRaf = requestAnimationFrame(autoStep);
+  }
+
+  autoBtn.addEventListener('click', function(){
+    autoOn = !autoOn;
+    autoBtn.classList.toggle('on', autoOn);
+    if (autoOn){
+      ghost.classList.add('hide');
+      pushUndo();
+      autoPrev = null;
+      autoStep();
+    } else if (autoRaf){
+      cancelAnimationFrame(autoRaf);
+      autoRaf = null;
+    }
+  });
+
+  /* ---------- controls ---------- */
+  symEl.addEventListener('input', function(){ symOut.textContent = symEl.value; });
+  sizeEl.addEventListener('input', function(){ sizeOut.textContent = sizeEl.value; });
+
+  var mirrorBtn = document.getElementById('mirror');
+  mirrorBtn.addEventListener('click', function(){
+    mirror = !mirror;
+    mirrorBtn.classList.toggle('on', mirror);
+  });
+
+  document.getElementById('undo').addEventListener('click', popUndo);
+
+  document.getElementById('clear').addEventListener('click', function(){
+    pushUndo();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = BG;
+    ctx.fillRect(0, 0, W, H);
+    ghost.classList.remove('hide');
+  });
+
+  document.getElementById('save').addEventListener('click', function(){
+    var a = document.createElement('a');
+    a.download = 'bloom-' + Date.now() + '.png';
+    a.href = cv.toDataURL('image/png');
+    a.click();
+  });
+
+  document.addEventListener('keydown', function(e){
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')){ e.preventDefault(); popUndo(); }
+  });
+
+  window.addEventListener('resize', resize);
+  resize();
+})();
+</script>
+</body>
+</html>
