@@ -43,7 +43,7 @@
   h1 span{ color:var(--accent); }
   .lede{ color:var(--muted); font-size:14px; line-height:1.85; max-width:520px; margin:0; }
 
-  .cards{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; }
+  .cards{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; }
   @media (max-width:860px){ .cards{ grid-template-columns:1fr; } }
 
   a.card{
@@ -85,6 +85,28 @@
   .mini .c{ background:#ff6a48; color:#fff; animation:tap 2.6s ease-in-out infinite; }
   @keyframes tap{ 0%,70%,100%{ transform:scale(1);} 80%{ transform:scale(1.14);} }
 
+  /* run thumb */
+  .t-run{ background:linear-gradient(165deg,#ffe6d2 0%,#ffd3b8 100%); position:relative; overflow:hidden; }
+  .t-run .grd{ position:absolute; left:0; right:0; bottom:0; height:34px; background:#8c5a33; border-top:9px solid #e0a86a; }
+  .t-run .ck{
+    position:absolute; left:36px; bottom:43px; width:32px; height:32px; border-radius:50%;
+    background:#e2a15c; box-shadow:inset -3px -4px 0 rgba(90,55,30,.14);
+    animation:hop 1.15s cubic-bezier(.3,.75,.45,1) infinite;
+  }
+  .t-run .ck::before, .t-run .ck::after{
+    content:''; position:absolute; top:12px; width:4px; height:5.5px; border-radius:2px; background:#3a2313;
+  }
+  .t-run .ck::before{ left:9px; }
+  .t-run .ck::after{ left:19px; }
+  .t-run .ck i{ position:absolute; width:5px; height:5px; border-radius:50%; background:#5b361b; left:7px; top:4px; }
+  .t-run .ck i+i{ left:21px; top:2px; width:4px; height:4px; }
+  @keyframes hop{ 0%,100%{ transform:translateY(0);} 42%{ transform:translateY(-36px);} }
+  .t-run .jly{
+    position:absolute; bottom:84px; width:15px; height:15px; border-radius:5px;
+    animation:dashby 2.1s linear infinite;
+  }
+  @keyframes dashby{ from{ transform:translateX(0); } to{ transform:translateX(-230px); } }
+
   .body{ padding:22px 22px 24px; display:flex; flex-direction:column; gap:9px; flex:1; }
   .type{
     font-size:10.5px; letter-spacing:.14em; text-transform:uppercase;
@@ -111,7 +133,7 @@
 
   <div class="head">
     <div class="kicker">mini-lab · 2026.08.29</div>
-    <h1>오늘 만든 세 가지<span>.</span></h1>
+    <h1>오늘 만든 네 가지<span>.</span></h1>
     <p class="lede">
       전부 파일 하나로 끝나는 인터랙티브 토이입니다. 빌드도, 설치도 없이 더블클릭하면 바로 열립니다.
       기록은 브라우저에만 저장돼요.
@@ -161,10 +183,26 @@
       </div>
     </a>
 
+    <a class="card" href="run.html">
+      <div class="thumb t-run">
+        <div class="jly" style="left:200px; background:#ff8fa3;"></div>
+        <div class="jly" style="left:238px; background:#ffc46b; animation-delay:-.35s;"></div>
+        <div class="jly" style="left:276px; background:#8ad6c8; animation-delay:-.7s;"></div>
+        <div class="ck"><i></i><i></i></div>
+        <div class="grd"></div>
+      </div>
+      <div class="body">
+        <div class="type">게임</div>
+        <h2>Cookie Dash</h2>
+        <p>쿠키가 알아서 달리는 엔드리스 러너. 2단 점프와 슬라이드로 장애물을 넘고, 젤리를 이어 먹어 콤보와 에너지를 챙기세요.</p>
+        <div class="go">열기 <span>→</span></div>
+      </div>
+    </a>
+
   </div>
 
   <div class="foot">
-    폴더: <code>mini-lab/</code> — <code>focus.html</code>, <code>bloom.html</code>, <code>merge.html</code><br>
+    폴더: <code>mini-lab/</code> — <code>focus.html</code>, <code>bloom.html</code>, <code>merge.html</code>, <code>run.html</code><br>
     외부 라이브러리 없음. 글꼴만 Google Fonts에서 불러오고, 오프라인이면 시스템 글꼴로 자연스럽게 대체됩니다.
   </div>
 
